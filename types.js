@@ -213,6 +213,7 @@ class Book {
     if (!name) { throw new FError('Name not specified') }
     if (typeof name != 'string') { throw new FError('Name not string') }
     if (name.length > 255) { throw new FError('Name should be <= 255 chars') }
+    if (name.includes(':')) { throw new FError('Name cannot contain semi-colon') }
     
     // check for doubling
     let accountFullName = parent ? `${parent}:${name}` : name;

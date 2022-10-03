@@ -32,16 +32,6 @@ module.exports = function(url) {
       type: DataTypes.STRING,
       allowNull: false
     },
-    /*
-    path: {
-      type: DataTypes.ARRAY(DataTypes.STRING),
-      allowNull: false,
-    },
-    fullName: {
-      type: DataTypes.VIRTUAL,
-      get() { return this.path.join(':') }
-    },
-    */
     path: {
       type: DataTypes.VIRTUAL,
       get() { return this.fullName.split(':') }
