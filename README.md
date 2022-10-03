@@ -176,6 +176,7 @@ When you're done accounting, it's good behaviour to
 - Transaction void. If you made a mistake, you'll have to manually commit an inverse Transaction
 - Balance meta filtering. Not sure if needed.
 - Moving Account to different parent
+- Retrieving Accounts tree 
 - ?
 
 Will be happy to see your contributions and/or critics.
