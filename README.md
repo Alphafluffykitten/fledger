@@ -154,10 +154,10 @@ Returned array is an array of RichTransaction objects:
         id: 1,
         accountName: 'Assets:usdt',
         accountPath: ['Assets', 'usdt'],
-        amount: 10,
+        amount: '10',
         credit: false,
         currency: 'USD',
-        exchangeRate: 1.0,
+        exchangeRate: '1.0',
         memo: 'User 1 deposit'
         meta: { type: 'userDeposit' }
         createdAt: <Date>
