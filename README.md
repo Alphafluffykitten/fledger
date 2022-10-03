@@ -15,17 +15,17 @@ Fledger's API is similar to Medici, BUT IT DIFFERS ENOUGH!
 
 This readme doesn't cover double-ledger accounting basics, so you have to do your own research on how to use such systems and what are they for.
 
-When you give Flanker a DB connection url (see Usage section), it turns this DB into a Book. Book is a collection of Journal Entries. Each Journal Entry is a set of Transactions on Accounts, that balance to zero. If you try to commit non-balanced entry, it will throw.
+When you give Fledger a DB connection url (see Usage section), it turns this DB into a Book. Book is a collection of Journal Entries. Each Journal Entry is a set of Transactions on Accounts, that balance to zero. If you try to commit non-balanced entry, it will throw.
 
 Each Transaction is an operation on exactly one Account - debit or credit.
 
-Unlike Medici, Flanker uses a plan of accounts. That means that you have to create an Account before you can do Transactions on it.
+Unlike Medici, Fledger uses a plan of accounts. That means that you have to create an Account before you can do Transactions on it.
 
 Account names are arbitrary, but length of one account name can't be more than 255 chars, and it's full name (including parent accounts) cannot exceed 1024 chars. Names cannot contain semi-colon.
 
 ## Sub-accounts
 
-Flanker utilizies a conception of sub-accounts, very common in accounting. Accounts are created as a tree (like folders in computer), and can be addressed with string semi-colon notation. For example: 'Assets' and 'Assets:bank', where the latter is sub-account of the former.
+Fledger utilizies a conception of sub-accounts, very common in accounting. Accounts are created as a tree (like folders in computer), and can be addressed with string semi-colon notation. For example: 'Assets' and 'Assets:bank', where the latter is sub-account of the former.
 
 When you request balance or history of upper-level Account, you get aggregated balance of it AND all of it's sub-accounts. It allows you to query, for example, all expenses, or just office expenses, if you created a sub-account for it.  
 For example, balance of `Assets:banks:Silvergate` is `5000` and balance of `Assets:banks:Huntington` is `10000`. You haven't created any transactions on `Assets` and `Assets:banks`.  
