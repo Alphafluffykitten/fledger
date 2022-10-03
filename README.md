@@ -28,12 +28,12 @@ Account names are arbitrary, but length of one account name can't be more than 2
 Flanker utilizies a conception of sub-accounts, very common in accounting. Accounts are created as a tree (like folders in computer), and can be addressed with string semi-colon notation. For example: 'Assets' and 'Assets:bank', where the latter is sub-account of the former.
 
 When you request balance or history of upper-level Account, you get aggregated balance of it AND all of it's sub-accounts. It allows you to query, for example, all expenses, or just office expenses, if you created a sub-account for it.  
-For example, balance of Assets:banks:Silvergate is 5000 and balance of Assets:banks:Huntington is 10000. You haven't created any transactions on Assets and Assets:banks.  
-You call book.balance('Assets'), it returns '15000'
+For example, balance of `Assets:banks:Silvergate` is `5000` and balance of `Assets:banks:Huntington` is `10000`. You haven't created any transactions on `Assets` and `Assets:banks`.  
+You call `book.balance('Assets')`, it returns `'15000'`
 
 ## Meta info
 
-Every transaction can be augmented with meta-info. Meta-info is a JSON object. It's handy to filter transactions.
+Every transaction can be augmented with meta-info. Meta-info is a JSON object. It's handy for filtering transactions.
 
 For example, you have an account 'Assets:usdt', which reflects your USDT cryptowallet. There can be various types of transaction in and out of it. Augment every transaction with meta-info object like `{type: 'userDeposit'}` or `{type: 'innerFundsTransfer'}` so that you can later grab only user deposits out of all funds movements.
 
@@ -42,6 +42,8 @@ For example, you have an account 'Assets:usdt', which reflects your USDT cryptow
 Multi-currency acconting requires that every time you post a Transaction on Account denominated in foreign currency, you augment it with current exchange rate to the *base accounting currency*. Even if you are to reflect the transfer of funds between two foreign currency accounts, their exchange rates should be to the base accounting currency, not between two of them foreign currencies.
 
 First currency that you create in the currencies list is considered a base accounting currency. It's exchange rate always assumed to be `1.0`, no matter what you set in your transactions.
+
+Exchange rate in Fledger is a **divisor**. It means that foreign currency is **divided by** exchange rate to obtain corresponding amount in base currency.
 
 **Example:**
 
@@ -96,6 +98,7 @@ To create root account:
 To create sub-account:
 
     await book.createAccount('usdt', 'USD', 'Assets')
+    // parent account -----------------------^
 
 To create sub-sub-account:
 
@@ -145,6 +148,7 @@ This little ledger query will return sorted by date array of transactions of 'As
     )
 
 Returned array is an array of RichTransaction objects:
+
     [
       {
         id: 1,
