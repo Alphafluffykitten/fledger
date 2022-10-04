@@ -14,6 +14,10 @@
     "double-ledger",
     "multicurrency"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Alphafluffykitten/fledger"
+  },
   "author": "Alphafluffykitten",
   "license": "ISC",
   "dependencies": {
