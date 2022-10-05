@@ -112,9 +112,26 @@ describe('Fledger tests', function() {
     })
   })
 
-  context('Helpers', function() {
+  xcontext('Helpers', function() {
     xit('list accounts', async function() {
       console.log(JSON.stringify(await book.getAccounts(), null, 2))
+    })
+  })
+
+  context('MultiCurrency', function() {
+    it('change the RUB rate', async function() {
+      await book.entry('User 1 RUB top up')
+      .debit('Assets:bank:AlfaBank', 700000, {type: 'userTopUp'}, 70)
+      .credit('UserBalances:1', 10000, {type: 'userTopUp'})
+      .commit()
+    })
+
+    it('currencies trading balances', async function() {
+      let rubTB = (await book._findCurrency('RUB')).tradingBalance;
+      let usdTB = (await book._findCurrency('USD')).tradingBalance;
+
+      expect(rubTB).to.be.equal('1300300')
+      expect(usdTB).to.be.equal('-20000')
     })
   })
 })

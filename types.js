@@ -161,7 +161,8 @@ class Book {
     let accs = await this.db.Account.findAll({
       where: { fullName: {
         [Op.startsWith]: strBegin
-      }}
+      }},
+      include: 'currency'
     })
 
     return accs
@@ -411,9 +412,11 @@ class Entry {
     if (amount.lte(0)) { throw new FError('Amount should be > 0') }
     if (!amount.isInteger()) { throw new FError('Amount is not integer') }
 
-    if (!exchangeRate) {exchangeRate = 1}
-    exchangeRate = BN(exchangeRate);
-    if (exchangeRate.lte(0)) { throw new FError('Exchange rate should be > 0') }
+    if (exchangeRate) {
+      exchangeRate = BN(exchangeRate);
+      if (exchangeRate.isNaN()) { throw new FError('Exchange rate is not a number') }
+      if (exchangeRate.lte(0)) { throw new FError('Exchange rate should be > 0') }
+    }
 
     if (!meta) { meta = {} }
     if (typeof meta != 'object') { throw new FError('meta is not object') }
@@ -434,6 +437,22 @@ class Entry {
         let dbAcc = await this.book._findAccount(el.account);
         if (!dbAcc) { throw new FError(`Account ${el.account} not found on DB`) }
         el.account = dbAcc
+      }
+    }
+  }
+
+  _setExchangeRates() {
+    for (let direction of ['debits', 'credits']) {
+      for (let el of this.entry[direction]) {
+        // if tx in base currency, ignore user-set rate and set 1.0
+        if (el.account.currency.id == 1) {
+          el.exchangeRate = BN(1)
+        // for non-base currencies: if rate wasn't set in entry, try to find it in DB cached
+        } else if (!el.exchangeRate) {
+          let rate = el.account.currency.exchangeRate
+          if (!rate) { throw new FError(`Cannot find exchange rate for account ${el.account.fullName} in book entry, nor in DB. Perhaps no txs was made with this currency before`) }
+          el.exchangeRate = rate
+        }
       }
     }
   }
@@ -488,19 +507,39 @@ class Entry {
   }
 
   /**
-   * Updates exchange rates for all accounts with non-base currency, listed in this entry
+   * Updates exchange rates and tradingBalances for all currencies listed in txs of entry  
    * Called after transactions are committed
    */
-  async _updateExchangeRates() {
+  async _updateCurrency() {
     if (!this._committed) { throw new FError('Cannot update exchange rates before entry committed') }
+
+    // this will accumulate updates for all currencise listed in this entry's txs
+    // also holds the currency object itself
+    let currencyUpdates = {}
+    
     for (let direction of ['debits', 'credits']) {
       for (let el of this.entry[direction]) {
-        if (el.account.currency.id != 1) {
-          let currency = el.account.currency;
-          currency.exchangeRate = el.exchangeRate.toString();
-          await currency.save();
+        let currency = el.account.currency;
+        if (!currencyUpdates[currency.code]) {
+          currencyUpdates[currency.code] = {tbUpdate: BN(0), exchangeRate: null, currency}
         }
+        // update currency's exchange rate
+        if (currency.id != 1) {
+          currencyUpdates[currency.code].exchangeRate = el.exchangeRate.toString();
+        } else {
+          currencyUpdates[currency.code].exchangeRate = '1'
+        }
+        
+        // update currency's trading balance amount
+        let amount = direction == 'debits' ? BN(el.amount) : BN(el.amount).negated();
+        currencyUpdates[currency.code].tbUpdate = currencyUpdates[currency.code].tbUpdate.plus(amount)
       }
+    }
+
+    for (let code in currencyUpdates) {
+      currencyUpdates[code].currency.exchangeRate = currencyUpdates[code].exchangeRate;
+      currencyUpdates[code].currency.tradingBalance = BN(currencyUpdates[code].currency.tradingBalance).plus(currencyUpdates[code].tbUpdate)
+      await currencyUpdates[code].currency.save()
     }
   }
 
@@ -508,6 +547,7 @@ class Entry {
     if (this._committed) { throw new FError('This entry is already committed') }
 
     await this._findAccounts()
+    this._setExchangeRates()
     this._checkBalance()
     let transactions = this._makeTransactions();
 
@@ -518,8 +558,8 @@ class Entry {
 
     this._committed = true
 
-    // for all transactions update currency.exchangeRate
-    await this._updateExchangeRates();
+    // for all transactions update currency.exchangeRate and currency.tradingBalance
+    await this._updateCurrency();
   }
 }
 

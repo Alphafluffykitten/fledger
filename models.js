@@ -14,8 +14,11 @@ module.exports = function(url) {
     },
     exchangeRate: {
       type: DataTypes.DOUBLE,
+    },
+    tradingBalance: {
+      type: DataTypes.BIGINT,
       allowNull: false,
-      defaultValue: 1.0
+      defaultValue: 0
     }
   },
   {

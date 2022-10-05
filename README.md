@@ -179,6 +179,8 @@ When you're done accounting, it's good behaviour to
 - Balance meta filtering. Not sure if needed.
 - Moving Account to different parent
 - Retrieving Accounts tree 
+- Entering transactions in the past (or future)
+- Forced recalculation of (cached) balances
 - ?
 
 Will be happy to see your contributions and/or critics.
