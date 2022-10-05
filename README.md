@@ -60,7 +60,9 @@ Exchange rate in Fledger is a **divisor**. It means that foreign currency is **d
       .credit('ThaiBank', 3000, null, 30.0)  // - tx over foreign currency account,
                                              //   have to put an exchange rate here
       .debit('USBank', 100)  // - tx over base currency account,
-                             //   exchange rate is always 1.0
+                             //   exchange rate is always 1.0.
+                             //   If you set anything but 1.0 here, IT WONT THROW!
+                             //   It will be ignored!
       .commit()
 
 ## Bignumber.js
