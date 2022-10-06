@@ -12,13 +12,13 @@ describe('Fledger tests', function() {
     // sequelize takes time to start
     this.timeout(20000);
     book = require('../fledger.js')(`${process.env.postgresUri}/fledgerTest`)
+    await book.db.sequelize.drop();
     await book.init()
   })
 
   // drop tables
   after(async function() {
     this.timeout(10000);
-    await book.db.sequelize.drop();
     await book.close();
   })
   
@@ -127,11 +127,26 @@ describe('Fledger tests', function() {
     })
 
     it('currencies trading balances', async function() {
-      let rubTB = (await book._findCurrency('RUB')).tradingBalance;
-      let usdTB = (await book._findCurrency('USD')).tradingBalance;
+      let tb = await book.tradingBalance()
+      expect(tb.currency.RUB).to.be.equal('1300300')
+      expect(tb.currency.USD).to.be.equal('-20000')
+    })
 
-      expect(rubTB).to.be.equal('1300300')
-      expect(usdTB).to.be.equal('-20000')
+
+
+    it('change RUB to USD and void RUB trading balance', async function() {
+      await book.entry('exchange RUB to USD')
+        .credit('Assets:bank:AlfaBank', 1300300, null, 100)
+        .debit('Assets:bank:Huntington', 13003)
+        .commit()
+    })
+
+    it('trading balances show loss on exchange ops', async function() {
+      let tb = await book.tradingBalance()
+
+      expect(tb.currency.RUB).to.be.equal('0')
+      expect(tb.currency.USD).to.be.equal('-6997')
+      expect(tb.base).to.be.equal('-6997')
     })
   })
 })

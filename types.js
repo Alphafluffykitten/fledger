@@ -362,6 +362,79 @@ class Book {
 
     return txs
   }
+
+  /**
+   * Returns change of trading balance account for selected dates.
+   * If dates not specified, calculated accross all transactions, be careful.
+   * Results are not cached.
+   * @param {object} [options] 
+   * @param {Date} [options.startDate] - start date (default - new Date(0))
+   * @param {Date} [options.endDate] - end date (default - now)
+   * @returns {object} Object like this:
+   *  {
+   *    currencyBalances: { USD: <USD balance in string>, ... },
+   *    baseCurrencyBalance: <change of trading balance converted to base currency, in string>
+   *  }
+   */
+  async tradingBalance(options) {
+    let startDate = new Date(0)
+    let endDate = new Date()
+    if (options) {
+      if (options.startDate) {
+        if (!options.startDate instanceof Date) { throw new FError('options.startDate should be of Date type') }
+        startDate = options.startDate;
+      }
+      if (options.endDate) {
+        if (!options.endDate instanceof Date) { throw new FError('options.endDate should be of Date type') }
+        endDate = options.endDate;
+      }
+      if (startDate > endDate) {
+        throw new FError(`options.startDate ${startDate.toString()} should go before options.endDate ${endDate.toString()}`)
+      }
+    }
+
+    let tb = { currency: {}, base: BN(0) }
+
+    // fetch currencies list
+    let currencies = await this.db.Currency.findAll()
+
+    // for each currency fetch its debits and credits sum and calculate difference
+    for (let currency of currencies) {
+      let txs
+      txs = await this.db.Transaction.findAll({
+        where: {
+          '$account.currencyId$': currency.id,
+          credit: true,
+          createdAt: { [Op.between]: [startDate, endDate] }
+        },
+        include: 'account'
+      })
+      let credits = BN(0);
+      for (let tx of txs) { credits = credits.plus(tx.amount) }
+
+      txs = await this.db.Transaction.findAll({
+        where: {
+          '$account.currencyId$': currency.id,
+          credit: false,
+          createdAt: { [Op.between]: [startDate, endDate] }
+        },
+        include: 'account'
+      })
+      let debits = BN(0)
+      for (let tx of txs) { debits = debits.plus(tx.amount) }
+
+      // calculate currency balance
+      let diff = debits.minus(credits)
+
+      tb.currency[currency.code] = diff.toString();
+      // collect base currency balance over all currencies 
+      tb.base = tb.base.plus(diff.div(currency.exchangeRate))
+    }
+
+    tb.base = tb.base.toString()
+
+    return tb
+  }
 }
 
 class Entry {
@@ -507,7 +580,7 @@ class Entry {
   }
 
   /**
-   * Updates exchange rates and tradingBalances for all currencies listed in txs of entry  
+   * Updates exchange rates for all currencies listed in txs of entry  
    * Called after transactions are committed
    */
   async _updateCurrency() {
@@ -521,7 +594,7 @@ class Entry {
       for (let el of this.entry[direction]) {
         let currency = el.account.currency;
         if (!currencyUpdates[currency.code]) {
-          currencyUpdates[currency.code] = {tbUpdate: BN(0), exchangeRate: null, currency}
+          currencyUpdates[currency.code] = { exchangeRate: null, currency }
         }
         // update currency's exchange rate
         if (currency.id != 1) {
@@ -529,16 +602,11 @@ class Entry {
         } else {
           currencyUpdates[currency.code].exchangeRate = '1'
         }
-        
-        // update currency's trading balance amount
-        let amount = direction == 'debits' ? BN(el.amount) : BN(el.amount).negated();
-        currencyUpdates[currency.code].tbUpdate = currencyUpdates[currency.code].tbUpdate.plus(amount)
       }
     }
 
     for (let code in currencyUpdates) {
       currencyUpdates[code].currency.exchangeRate = currencyUpdates[code].exchangeRate;
-      currencyUpdates[code].currency.tradingBalance = BN(currencyUpdates[code].currency.tradingBalance).plus(currencyUpdates[code].tbUpdate)
       await currencyUpdates[code].currency.save()
     }
   }
