@@ -1,6 +1,6 @@
 {
   "name": "fledger",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Multicurrency double-ledger accounting for NodeJS. Uses Sequelize/Postgres",
   "main": "fledger.js",
   "directories": {
