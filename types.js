@@ -372,8 +372,8 @@ class Book {
    * @param {Date} [options.endDate] - end date (default - now)
    * @returns {object} Object like this:
    *  {
-   *    currencyBalances: { USD: <USD balance in string>, ... },
-   *    baseCurrencyBalance: <change of trading balance converted to base currency, in string>
+   *    currency: { USD: <USD balance in string>, ... },
+   *    base: <change of trading balance converted to base currency, in string>
    *  }
    */
   async tradingBalance(options) {

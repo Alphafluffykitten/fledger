@@ -65,6 +65,32 @@ Exchange rate in Fledger is a **divisor**. It means that foreign currency is **d
                              //   It will be ignored!
       .commit()
 
+### Trading balance
+
+Correct accounting for multiple currencies requires us to properly set up a Trading Account. We won't delve into it here, i'll refer you to [superb tutorial by Peter Selinger](https://www.mathstat.dal.ca/~selinger/accounting/tutorial.html#2) that explains everything you need to know about multi-currency accounting.
+Trading Account is a special type of account that cannot be accessed/changed directly in Fledger, but it changes its state every time you make a transaction with several currencies (2 or more).
+You can at any time query its state, or change of state for a given timespan:
+
+    // query change of Trading Account state for last month:
+    let tb = await book.tradingBalance({
+      startDate: moment().subtract(1, 'month').toDate(),
+      endDate: new Date()
+    })
+
+    // query current state of Trading Account (for all time):
+    let tb = await book.tradingBalance()
+
+    // returns object:
+    // {
+    //   base: <change of trading balance converted to base currency, in string>,
+    //   currency: {
+    //     USD: <USD trading balance in string>,
+    //     THB: <THB trading balance in string>
+    //   }
+    // }
+
+Calculating Trading Account state change requires fetching all Transactions for selected timespan. It does not cache (at least in current version). If you query `await book.tradingBalance()`, it will fetch all Transactions for all time, so it may be costly. Consider only using this method for selected timespans.
+
 ## Bignumber.js
 
 Fledger uses `bignumber.js` under the hood to handle numbers. Transactions amounts in DB are held in BIGINT. Thats why all numbers returned by Fledger are Strings, not Numbers. This way we can guarantee stable handling of big numbers. You can convert them to Numbers at your own risk, but we suggest you use some big number library on your end, too. 
