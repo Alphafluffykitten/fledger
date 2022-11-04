@@ -30,6 +30,18 @@ describe('Fledger tests', function() {
     await book.createCurrency('RUB')
   })
 
+  it('throw on account create with non-existing parent', async function() {
+    await expect(
+      book.createAccount('Assets:usdt')
+    ).to.be.rejectedWith('')
+  })
+
+  it('throw on wrong account name', async function(){
+    await expect(
+      book.createAccount('Assets$:usdt')
+    ).to.be.rejectedWith('')
+  })
+
   it('create accounts', async function() {
     await book.createAccount('Assets')
     await book.createAccount('Assets:usdt')

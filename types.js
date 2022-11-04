@@ -213,6 +213,8 @@ class Book {
     if (!name) { throw new FError('Name not specified') }
     if (typeof name != 'string') { throw new FError('Name not string') }
     if (name.length > 1024) { throw new FError('Name should be <= 255 chars') }
+    let re = /[^\w:]/
+    if (re.test(name)) { throw new FError('Name should contain alphanumeric chars and semi-colons as delimeters of account names') }
 
     let accountPath = name.split(':')
     let nameCreated = accountPath[accountPath.length-1]
