@@ -44,7 +44,7 @@ class Book {
   }
 
   entry(memo) {
-    return new Entry(memo,this)
+    return new Entry(memo, this)
   }
 
   /**
@@ -72,7 +72,14 @@ class Book {
     return accPath
   }
 
+  /**
+   * Finds currency in DB by its code. If no code specified, returns base currency
+   * @param {String} [code] - currency code like 'USD' 
+   * @returns {db.Currency}
+   */
   async _findCurrency(code) {
+    if (!code) { return await this.db.Currency.findByPk(1) }
+    if (typeof code != 'string') { throw FError('Currency code not string') }
     return await this.db.Currency.findOne({where: {code}})
   }
 
@@ -181,12 +188,13 @@ class Book {
     if (code.length > 10) { throw new FError('Code 10 chars max') }
   
     await this.db.Currency.create({code})
+    return true
   }
 
   /**
    * Checks for currency presence in DB, returns object like {code, exchangeRate} or null if not found
    * @param {string} code - currency code
-   * @returns {Object|null}
+   * @returns {Object|undefined}
    */
   async checkCurrency(code) {
     let dbCur = await this._findCurrency(code)
@@ -195,32 +203,40 @@ class Book {
   }
 
   /**
-   * Creates account. If parent is null, account is created on root level
-   * @param {string} name - account name (without delimeters, just this account name, no ancestors or parents here)
-   * @param {string} currency - account currency
-   * @param {string} [parent] - parent account in common account notation (ex.: 'Assets:crypto'). Should be existing account
+   * Creates account. Non-recursive.
+   * @param {string} name - Account name in common string notation (like 'Assets:banks:huntington').
+   *  If account is on root level (like 'Assets'), it's just created.
+   *  If it's a child account (like 'Assets:banks:huntington'), method tries to create the deepest child ('huntington'), while parents should exist (in this example 'Assets:banks' should already exist)
+   * @param {string} [currency] - account currency. If not specified, base currency is used
    */
-  async createAccount(name, currency, parent) {
-    let parentId
+  async createAccount(name, currency) {
+    if (!name) { throw new FError('Name not specified') }
+    if (typeof name != 'string') { throw new FError('Name not string') }
+    if (name.length > 1024) { throw new FError('Name should be <= 255 chars') }
+
+    let accountPath = name.split(':')
+    let nameCreated = accountPath[accountPath.length-1]
+    if (nameCreated.length > 255) { throw new FError('Account name cannot be > 255 chars') }
+
+    // check for doubling
+    if (await this._findAccount(name)) { throw new FError(`Account ${name} already exists`)}
+
+    let parent = null
+    if (accountPath.length > 1) { parent = accountPath.slice(0, accountPath.length-1).join(':') }
+
+    let parentId = null
     if (parent) {
       let parentDb = await this._findAccount(parent);
       if (!parentDb) { throw new FError(`Parent account ${parent} not found on DB`)}
       parentId = parentDb.id
-    } else { parentId = null }
+    }
 
+    // if currency not set, fill find base currency with id=1
     let dbCurrency = await this._findCurrency(currency)
     if (!dbCurrency) { throw new FError(`Currency ${currency} not found`) }
 
-    if (!name) { throw new FError('Name not specified') }
-    if (typeof name != 'string') { throw new FError('Name not string') }
-    if (name.length > 255) { throw new FError('Name should be <= 255 chars') }
-    if (name.includes(':')) { throw new FError('Name cannot contain semi-colon') }
-    
-    // check for doubling
-    let accountFullName = parent ? `${parent}:${name}` : name;
-    if (await this._findAccount(accountFullName)) { throw new FError(`Account ${accountFullName} already exists`)}
-
-    await this.db.Account.create({name, currencyId: dbCurrency.id, parentId})
+    await this.db.Account.create({name: nameCreated, currencyId: dbCurrency.id, parentId})
+    return true
   }
 
   /**

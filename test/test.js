@@ -31,13 +31,13 @@ describe('Fledger tests', function() {
   })
 
   it('create accounts', async function() {
-    await book.createAccount('Assets', 'USD')
-    await book.createAccount('usdt', 'USD', 'Assets')
-    await book.createAccount('bank', 'USD', 'Assets')
-    await book.createAccount('AlfaBank', 'RUB', 'Assets:bank')
-    await book.createAccount('Huntington', 'USD', 'Assets:bank')
-    await book.createAccount('UserBalances', 'USD')
-    await book.createAccount('1', 'USD', 'UserBalances')
+    await book.createAccount('Assets')
+    await book.createAccount('Assets:usdt')
+    await book.createAccount('Assets:bank')
+    await book.createAccount('Assets:bank:AlfaBank', 'RUB')
+    await book.createAccount('Assets:bank:Huntington')
+    await book.createAccount('UserBalances')
+    await book.createAccount('UserBalances:1')
   })
 
   context('Transactions', function() {
