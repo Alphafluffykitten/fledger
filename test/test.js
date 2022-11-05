@@ -124,9 +124,12 @@ describe('Fledger tests', function() {
     })
   })
 
-  xcontext('Helpers', function() {
-    xit('list accounts', async function() {
+  context('Helpers', function() {
+    it('list all accounts', async function() {
       console.log(JSON.stringify(await book.getAccounts(), null, 2))
+    })
+    it('list "Assets" subaccounts', async function() {
+      console.log(JSON.stringify(await book.getAccounts('Assets'), null, 2))
     })
   })
 

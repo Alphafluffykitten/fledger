@@ -5,12 +5,15 @@ const BN = require('bignumber.js');
 const NEAR_ZERO = BN(1).shiftedBy(-10);
 
 class SafeAccount {
-  constructor(dbAcc) {
+  constructor(dbAcc, children) {
     this.name = dbAcc.name
     this.fullName = dbAcc.fullName
     this.path = dbAcc.path
     if (dbAcc.currency) {
       this.currency = dbAcc.currency.code
+    }
+    if (children) {
+      this.children = children
     }
   }
 }
@@ -166,9 +169,10 @@ class Book {
     else { strBegin = '' }
 
     let accs = await this.db.Account.findAll({
-      where: { fullName: {
-        [Op.startsWith]: strBegin
-      }},
+      where: { 
+        fullName: { [Op.startsWith]: strBegin }
+      },
+      order: [['fullName', 'ASC']],
       include: 'currency'
     })
 
@@ -254,40 +258,38 @@ class Book {
   }
 
   /**
-   * Returns subaccounts tree of account passed in params. Pass null to retrieve all accounts tree. 
-   * @param {string} account - account name in common string notation (Ex.: 'Assets:bank') 
-   * @returns tree-like object of SafeAccount objects: [{account: SafeAccount, children: []}, ... ]
+   * Returns subaccounts tree of parent account passed in params. Pass null to retrieve all accounts tree. 
+   * @param {String} parent - parent account name in common string notation (Ex.: 'Assets:bank') 
+   * @returns array of SafeAccount objects with children
    */
-  /*
-  async getAccounts(account) {
-    let dbAcc = null;
-    if (account) { dbAcc = await this._findAccount(account) }
-    let accs = await this._findSubaccounts(dbAcc);
+  async getAccounts(parent) {
+    let parentDb = null
+    let parentId = null
+    if (parent) { 
+      parentDb = await this._findAccount(parent)
+      parentId = parentDb.id
+    }
+    let accs = await this._findSubaccounts(parentDb)
 
-    // turn flat array of subaccounts into tree
-    // TODO
+    // turn flat array of subaccounts into tree    
+    function findChildren(id) {
+      let children = accs.filter(acc => acc.parentId == id)
+      children = children.map((child) => { return new SafeAccount(child, findChildren(child.id)) })
+      return children
+    }
 
+    let tree = findChildren(parentId)
     return tree
   }
-  */
-
+  
   /**
-   * @param {string} account - account in common string notation (Ex.: 'Assets:bank')
-   * @returns {string} Cumulative balance of this account AND its descendant accounts
+   * @param {String} account - account in common string notation (Ex.: 'Assets:bank')
+   * @returns {String} Cumulative balance of this account AND its descendant accounts
    */
   async balance(account) {
-    // TODO: take metainfo as filtering criteria when counting balance
-    
     // find account in question
     let dbAcc = await this._findAccount(account);
     if (!dbAcc) { throw new FError(`Account ${account} not found on DB`) }
-
-    // for now lets do without meta arg
-    /*
-    if (meta) {
-      if (typeof meta != 'object') { throw new FError('Meta should be object') }
-    } else { meta = {} }
-    */
 
     // find all subaccounts of account and make array of all accounts in question
     let accounts = [dbAcc, ...(await this._findSubaccounts(dbAcc))]
@@ -304,13 +306,13 @@ class Book {
 
   /**
    * Ledger history query.
-   * @param {string} account - account to get transactions from. Transactions are fetched for this account AND all its descendants
+   * @param {String} account - account to get transactions from. Transactions are fetched for this account AND all its descendants
    * @param {Object} [options]
    * @param {Date} [options.startDate] - start date (default - new Date(0))
    * @param {Date} [options.endDate] - end date (default - now)
    * @param {Number} [options.offset] - pagination offset
    * @param {Number} [options.limit] - pagination limit
-   * @param {string} [options.order] - order. Can be 'desc' or 'asc', default - 'desc' (newest first)
+   * @param {String} [options.order] - order. Can be 'desc' or 'asc', default - 'desc' (newest first)
    * @param {Object} [meta] Meta info to filter transactions.
    *  (Ex.: pass {type: 'userSetHold' , holdId: 1} to obtain only txs of type 'userSetHold' with holdId == 1) 
    * @returns array of RichTransaction objects: {id, accountName, accountPath, amount, credit, currency, exchangeRate, memo, meta, createdAt}[]
