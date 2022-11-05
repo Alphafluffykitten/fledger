@@ -123,20 +123,73 @@ To create root account:
 
     await book.createAccount('Assets', 'USD')
 
+OR
+
+    await book.createAccount('Assets')
+
+Currency can be omitted if account is created in base currency
+
 To create sub-account:
 
-    await book.createAccount('usdt', 'USD', 'Assets')
-    // parent account -----------------------^
+    await book.createAccount('Assets:usdt')
+    // parent account --------^^^^^^
 
 To create sub-sub-account:
 
     // first create upper level accounts
-    await book.createAccount('UserBalances', 'USD')
-    await book.createAccount('1', 'USD', 'UserBalances')
+    await book.createAccount('UserBalances')
+    await book.createAccount('UserBalances:1')
 
     // create sub-sub-account 'UserBalances:1:spendable':
-    await book.createAccount('spendable', 'USD', 'UserBalances:1') 
-    // parent account ----------------------------^
+    await book.createAccount('UserBalances:1:spendable') 
+    // parent account --------^^^^^^^^^^^^^^
+
+If upper level accounts aren't created already, it'll throw
+
+## Retrieve accounts tree
+
+To retrieve whole accounts tree:  
+
+    await book.getAccounts()
+
+Will return tree-like array:
+
+    [
+      {
+        "name": "Assets",
+        "fullName": "Assets",
+        "path": [
+          "Assets"
+        ],
+        "currency": "USD",
+        "children": [
+          {
+            "name": "bank",
+            "fullName": "Assets:bank",
+            "path": [
+              "Assets",
+              "bank"
+            ],
+            "currency": "USD",
+            "children": []
+          },
+          {
+            "name": "usdt",
+            "fullName": "Assets:usdt",
+            "path": [
+              "Assets",
+              "usdt"
+            ],
+            "currency": "USD",
+            "children": []
+          }
+        ]
+      }
+    ]
+
+To retrieve accounts tree under some parent account:
+
+    await book.getAccounts('Assets:bank')
 
 ## Create Journal Entries
 
@@ -199,12 +252,25 @@ When you're done accounting, it's good behaviour to
 
     await book.close();
 
+# Changelog
+
+## 0.1.0
+
+BREAKING
+- changed call of `book.createAccount()`
+
+NON-BREAKING
+- retreive accounts tree with `book.getAccounts(parent)`
+
+## 0.0.4
+
+first public version
+
 # What's not done yet
 
 - Transaction void. If you made a mistake, you'll have to manually commit an inverse Transaction
 - Balance meta filtering. Not sure if needed.
 - Moving Account to different parent
-- Retrieving Accounts tree 
 - Entering transactions in the past (or future)
 - Forced recalculation of (cached) balances
 - ?
